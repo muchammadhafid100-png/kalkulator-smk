@@ -34,53 +34,57 @@ function calculateAndDisplay() {
     // Ubah IP string (192.168.1.10) menjadi angka 32-bit (integer)
     const ipInt = ipToInteger(ipStr);
     
-    // Hitung Subnet Mask dari CIDR (misal /24 -> 255.255.255.0)
-    // Ini adalah trik bitwise:
-    // -1 (dalam 32-bit) adalah 32 buah angka 1 (1111...1111)
-    // (32 - cidr) misal 32-24 = 8
-    // Kita geser 32 angka 1 tadi ke kiri sebanyak 8 kali
-    // Hasil: (11111111 11111111 11111111 00000000) -> 255.255.255.0
-    // '>>> 0' adalah trik untuk memastikan angka tetap positif (unsigned)
+    // Hitung Subnet Mask dari CIDR
     const maskInt = (-1 << (32 - cidr)) >>> 0;
     
     // Hitung Network ID
-    // Rumus: IP AND MASK
     const networkInt = (ipInt & maskInt) >>> 0;
 
     // Hitung Broadcast ID
-    // Rumus: NetworkID OR (NOT MASK)
-    // (NOT MASK) juga disebut Wildcard Mask
     const broadcastInt = (networkInt | (~maskInt)) >>> 0;
 
     // Hitung Host Pertama dan Terakhir
-    // (Khusus untuk /31 dan /32)
     const firstHostInt = (cidr <= 30) ? (networkInt + 1) >>> 0 : networkInt;
     const lastHostInt = (cidr <= 30) ? (broadcastInt - 1) >>> 0 : broadcastInt;
     
     // Hitung Jumlah Host
-    // Rumus: 2^(32 - cidr)
     const totalHosts = Math.pow(2, (32 - cidr));
-    const usableHosts = (cidr <= 30) ? (totalHosts - 2) : totalHosts;
+    const usableHosts = (cidr <= 30) ? (totalHosts - 2) : 0; // Lebih akurat
+
+    // --- RUMUS TAMBAHAN (BARU) ---
+    const wildcardInt = (~maskInt) >>> 0; // Rumus Wildcard Mask
+    const firstOctet = (ipInt >>> 24) & 255; // Ambil oktet pertama
+    const ipClass = getIpClass(firstOctet); // Rumus Kelas IP
+    const ipType = getIpType(ipInt, firstOctet, ipClass); // Rumus Tipe IP
+    const ipBinary = integerToBinaryIp(ipInt); // Rumus Biner
+    const maskBinary = integerToBinaryIp(maskInt); // Rumus Biner
 
     // --- Tampilkan Hasil ---
     
-    // Ubah angka integer kembali ke format IP (192.168.1.0)
+    // Tampilkan hasil lama
     document.getElementById('res-ip').textContent = `${ipStr}/${cidr}`;
     document.getElementById('res-mask').textContent = integerToIp(maskInt);
     document.getElementById('res-network').textContent = integerToIp(networkInt);
     document.getElementById('res-broadcast').textContent = integerToIp(broadcastInt);
     
-    // Tampilkan rentang host
     if (cidr <= 30) {
         document.getElementById('res-host-range').textContent = `${integerToIp(firstHostInt)} - ${integerToIp(lastHostInt)}`;
     } else if (cidr == 31) {
-         document.getElementById('res-host-range').textContent = "Point-to-Point (2 host)";
+         document.getElementById('res-host-range').textContent = "Point-to-Point";
     } else { // cidr == 32
-         document.getElementById('res-host-range').textContent = "Hanya 1 host (Loopback)";
+         document.getElementById('res-host-range').textContent = "Single Host";
     }
     
     document.getElementById('res-total-hosts').textContent = totalHosts.toLocaleString();
     document.getElementById('res-usable-hosts').textContent = (usableHosts > 0) ? usableHosts.toLocaleString() : "0";
+
+    // ▼▼▼ TAMPILKAN HASIL BARU ▼▼▼
+    document.getElementById('res-wildcard').textContent = integerToIp(wildcardInt);
+    document.getElementById('res-class').textContent = ipClass;
+    document.getElementById('res-type').textContent = ipType;
+    document.getElementById('res-bin-ip').textContent = ipBinary;
+    document.getElementById('res-bin-mask').textContent = maskBinary;
+    // ▲▲▲ BATAS AKHIR HASIL BARU ▲▲▲
 
     // Tampilkan div hasil
     showResults(true);
@@ -90,22 +94,16 @@ function calculateAndDisplay() {
 
 /** Mengubah IP string (cth: "192.168.1.1") menjadi integer 32-bit */
 function ipToInteger(ipStr) {
-    // 1. "192.168.1.1" -> ["192", "168", "1", "1"]
     const octets = ipStr.split('.').map(octet => parseInt(octet, 10));
-    // 2. Geser bit-nya (bitwise shift) dan gabungkan
-    // (192 << 24) | (168 << 16) | (1 << 8) | 1
     return ((octets[0] << 24) | (octets[1] << 16) | (octets[2] << 8) | octets[3]) >>> 0;
 }
 
 /** Mengubah integer 32-bit (cth: 3232235777) menjadi IP string */
 function integerToIp(ipInt) {
-    // 1. Ambil 4 bagian (octet) dari integer
-    // '>>>' adalah unsigned right shift, '& 255' mengambil 8 bit terakhir
     const octet1 = (ipInt >>> 24) & 255;
     const octet2 = (ipInt >>> 16) & 255;
     const octet3 = (ipInt >>> 8) & 255;
     const octet4 = ipInt & 255;
-    // 2. Gabungkan dengan titik
     return `${octet1}.${octet2}.${octet3}.${octet4}`;
 }
 
@@ -132,3 +130,56 @@ function showResults(show) {
         resultsDiv.classList.add('hidden');
     }
 }
+
+
+// --- ▼▼▼ FUNGSI BANTUAN BARU ▼▼▼ ---
+
+/** Mengubah integer 32-bit menjadi string biner yang diformat */
+function integerToBinaryIp(ipInt) {
+    // 1. Ubah ke biner, pastikan 32-bit (tambahkan '0' di depan jika perlu)
+    let binStr = (ipInt >>> 0).toString(2).padStart(32, '0');
+    
+    // 2. Pecah menjadi 4 bagian 8-bit dan gabungkan dengan titik
+    return [
+        binStr.substring(0, 8),
+        binStr.substring(8, 16),
+        binStr.substring(16, 24),
+        binStr.substring(24, 32)
+    ].join('.');
+}
+
+/** Mendapatkan Kelas IP berdasarkan oktet pertama */
+function getIpClass(firstOctet) {
+    if (firstOctet >= 1 && firstOctet <= 126) return "A";
+    if (firstOctet === 127) return "Loopback";
+    if (firstOctet >= 128 && firstOctet <= 191) return "B";
+    if (firstOctet >= 192 && firstOctet <= 223) return "C";
+    if (firstOctet >= 224 && firstOctet <= 239) return "D (Multicast)";
+    if (firstOctet >= 240 && firstOctet <= 255) return "E (Reserved)";
+    return "Tidak Diketahui";
+}
+
+/** Mendapatkan Tipe IP (Private, Public, dll.) */
+function getIpType(ipInt, firstOctet, ipClass) {
+    if (ipClass === "Loopback") return "Loopback";
+    
+    // Cek APIPA (169.254.x.x)
+    if ((ipInt & 0xFFFF0000) >>> 0 === 0xA9FE0000) return "APIPA";
+
+    // Cek Private Ranges (RFC 1918)
+    // 10.0.0.0/8
+    if (firstOctet === 10) return "Private (Class A)";
+    
+    // 172.16.0.0/12 (172.16.0.0 - 172.31.255.255)
+    if ((ipInt & 0xFFF00000) >>> 0 === 0xAC100000) return "Private (Class B)";
+
+    // 192.168.0.0/16 (192.168.0.0 - 192.168.255.255)
+    if ((ipInt & 0xFFFF0000) >>> 0 === 0xC0A80000) return "Private (Class C)";
+    
+    // Cek Multicast
+    if (ipClass.startsWith("D")) return "Multicast";
+
+    // Jika bukan semuanya, berarti Public
+    return "Public";
+}
+// --- ▲▲▲ BATAS AKHIR FUNGSI BARU ▲▲▲ ---
