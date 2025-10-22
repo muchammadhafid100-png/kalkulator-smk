@@ -1,43 +1,211 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kalkulator Jaringan TKJ</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+<p><strong>Host yang Dapat Digunakan:</strong> <span id="res-usable-hosts"></span></p>
 
-    <div class="container">
-        <h1>Kalkulator Subnetting</h1>
-        <p>Dibuat untuk Pelajar TKJ</p>
-
-        <div class="input-group">
-            <input type="text" id="ip-address" placeholder="Masukkan IP Address (cth: 192.168.1.10)">
-            <span class="slash">/</span>
-            <input type="number" id="cidr" placeholder="24" min="0" max="32">
-        </div>
-        
-        <button id="calculate-btn">Hitung!</button>
-
-        <div id="results" class="hidden">
-            <h2>Hasil Perhitungan:</h2>
-            <p><strong>Alamat IP:</strong> <span id="res-ip"></span></p>
-            <p><strong>Subnet Mask:</strong> <span id="res-mask"></span></p>
             <hr>
-            <p><strong>Network ID:</strong> <span id="res-network"></span></p>
-            <p><strong>Broadcast ID:</strong> <span id="res-broadcast"></span></p>
-            <p><strong>Rentang Host:</strong> <span id="res-host-range"></span></p>
-            <hr>
-            <p><strong>Jumlah Host:</strong> <span id="res-total-hosts"></span></p>
-            <p><strong>Host yang Dapat Digunakan:</strong> <span id="res-usable-hosts"></span></p>
-        </div>
+            <p><strong>Wildcard Mask:</strong> <span id="res-wildcard"></span></p>
+            <p><strong>Kelas IP:</strong> <span id="res-class"></span></p>
+            <p><strong>Tipe IP:</strong> <span id="res-type"></span></p>
 
-        <div id="error" class="hidden">
-            <p>Input tidak valid. Pastikan IP dan CIDR (0-32) benar.</p>
-        </div>
-    </div>
+            <div class="binary-view">
+                <strong>Representasi Biner:</strong>
+                <span id="res-bin-ip-label">IP Address:</span>
+                <span id="res-bin-ip" class="binary-code"></span>
+                
+                <span id="res-bin-mask-label">Subnet Mask:</span>
+                <span id="res-bin-mask" class="binary-code"></span>
+            </div>
+            </div> ```
 
-    <script src="script.js"></script>
-</body>
-</html>
+---
+
+### Perubahan 2: `script.js` (Menambah Logika Rumus Baru)
+
+Ini adalah bagian terpenting. Kita akan menambahkan beberapa fungsi baru di bagian "FUNGSI BANTUAN" dan memperbarui fungsi `calculateAndDisplay`.
+
+**Ganti seluruh isi file `script.js` Anda** dengan kode yang sudah diperbarui ini:
+
+```javascript
+/* * Ini adalah 'otak' dari kalkulator subnetting.
+ * Kita akan menggunakan 'bitwise operators' (operasi biner) 
+ * karena IP Address pada dasarnya adalah angka 32-bit.
+ */
+
+// 1. Ambil elemen HTML yang kita butuhkan
+const ipInput = document.getElementById('ip-address');
+const cidrInput = document.getElementById('cidr');
+const calculateBtn = document.getElementById('calculate-btn');
+const resultsDiv = document.getElementById('results');
+const errorDiv = document.getElementById('error');
+
+// 2. Tambahkan 'event listener' ke tombol
+calculateBtn.addEventListener('click', calculateAndDisplay);
+
+// Fungsi utama yang akan dipanggil saat tombol diklik
+function calculateAndDisplay() {
+    // Ambil nilai dari input
+    const ipStr = ipInput.value;
+    const cidr = parseInt(cidrInput.value, 10);
+
+    // Validasi input
+    if (!isValidIp(ipStr) || isNaN(cidr) || cidr < 0 || cidr > 32) {
+        showError(true);
+        showResults(false);
+        return; // Hentikan eksekusi
+    }
+
+    // Input valid, sembunyikan error dan lanjutkan
+    showError(false);
+    
+    // --- INTI LOGIKA SUBTARGETTING ---
+
+    // Ubah IP string (192.168.1.10) menjadi angka 32-bit (integer)
+    const ipInt = ipToInteger(ipStr);
+    
+    // Hitung Subnet Mask dari CIDR
+    const maskInt = (-1 << (32 - cidr)) >>> 0;
+    
+    // Hitung Network ID
+    const networkInt = (ipInt & maskInt) >>> 0;
+
+    // Hitung Broadcast ID
+    const broadcastInt = (networkInt | (~maskInt)) >>> 0;
+
+    // Hitung Host Pertama dan Terakhir
+    const firstHostInt = (cidr <= 30) ? (networkInt + 1) >>> 0 : networkInt;
+    const lastHostInt = (cidr <= 30) ? (broadcastInt - 1) >>> 0 : broadcastInt;
+    
+    // Hitung Jumlah Host
+    const totalHosts = Math.pow(2, (32 - cidr));
+    const usableHosts = (cidr <= 30) ? (totalHosts - 2) : 0; // Lebih akurat
+
+    // --- RUMUS TAMBAHAN (BARU) ---
+    const wildcardInt = (~maskInt) >>> 0; // Rumus Wildcard Mask
+    const firstOctet = (ipInt >>> 24) & 255; // Ambil oktet pertama
+    const ipClass = getIpClass(firstOctet); // Rumus Kelas IP
+    const ipType = getIpType(ipInt, firstOctet, ipClass); // Rumus Tipe IP
+    const ipBinary = integerToBinaryIp(ipInt); // Rumus Biner
+    const maskBinary = integerToBinaryIp(maskInt); // Rumus Biner
+
+    // --- Tampilkan Hasil ---
+    
+    // Tampilkan hasil lama
+    document.getElementById('res-ip').textContent = `${ipStr}/${cidr}`;
+    document.getElementById('res-mask').textContent = integerToIp(maskInt);
+    document.getElementById('res-network').textContent = integerToIp(networkInt);
+    document.getElementById('res-broadcast').textContent = integerToIp(broadcastInt);
+    
+    if (cidr <= 30) {
+        document.getElementById('res-host-range').textContent = `${integerToIp(firstHostInt)} - ${integerToIp(lastHostInt)}`;
+    } else if (cidr == 31) {
+         document.getElementById('res-host-range').textContent = "Point-to-Point";
+    } else { // cidr == 32
+         document.getElementById('res-host-range').textContent = "Single Host";
+    }
+    
+    document.getElementById('res-total-hosts').textContent = totalHosts.toLocaleString();
+    document.getElementById('res-usable-hosts').textContent = (usableHosts > 0) ? usableHosts.toLocaleString() : "0";
+
+    // ▼▼▼ TAMPILKAN HASIL BARU ▼▼▼
+    document.getElementById('res-wildcard').textContent = integerToIp(wildcardInt);
+    document.getElementById('res-class').textContent = ipClass;
+    document.getElementById('res-type').textContent = ipType;
+    document.getElementById('res-bin-ip').textContent = ipBinary;
+    document.getElementById('res-bin-mask').textContent = maskBinary;
+    // ▲▲▲ BATAS AKHIR HASIL BARU ▲▲▲
+
+    // Tampilkan div hasil
+    showResults(true);
+}
+
+// --- FUNGSI BANTUAN ---
+
+/** Mengubah IP string (cth: "192.168.1.1") menjadi integer 32-bit */
+function ipToInteger(ipStr) {
+    const octets = ipStr.split('.').map(octet => parseInt(octet, 10));
+    return ((octets[0] << 24) | (octets[1] << 16) | (octets[2] << 8) | octets[3]) >>> 0;
+}
+
+/** Mengubah integer 32-bit (cth: 3232235777) menjadi IP string */
+function integerToIp(ipInt) {
+    const octet1 = (ipInt >>> 24) & 255;
+    const octet2 = (ipInt >>> 16) & 255;
+    const octet3 = (ipInt >>> 8) & 255;
+    const octet4 = ipInt & 255;
+    return `${octet1}.${octet2}.${octet3}.${octet4}`;
+}
+
+/** Pengecekan sederhana format IP Address */
+function isValidIp(ipStr) {
+    const regex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    return regex.test(ipStr);
+}
+
+/** Fungsi untuk menampilkan/menyembunyikan pesan error */
+function showError(show) {
+    if (show) {
+        errorDiv.classList.remove('hidden');
+    } else {
+        errorDiv.classList.add('hidden');
+    }
+}
+
+/** Fungsi untuk menampilkan/menyembunyikan div hasil */
+function showResults(show) {
+    if (show) {
+        resultsDiv.classList.remove('hidden');
+    } else {
+        resultsDiv.classList.add('hidden');
+    }
+}
+
+
+// --- ▼▼▼ FUNGSI BANTUAN BARU ▼▼▼ ---
+
+/** Mengubah integer 32-bit menjadi string biner yang diformat */
+function integerToBinaryIp(ipInt) {
+    // 1. Ubah ke biner, pastikan 32-bit (tambahkan '0' di depan jika perlu)
+    let binStr = (ipInt >>> 0).toString(2).padStart(32, '0');
+    
+    // 2. Pecah menjadi 4 bagian 8-bit dan gabungkan dengan titik
+    return [
+        binStr.substring(0, 8),
+        binStr.substring(8, 16),
+        binStr.substring(16, 24),
+        binStr.substring(24, 32)
+    ].join('.');
+}
+
+/** Mendapatkan Kelas IP berdasarkan oktet pertama */
+function getIpClass(firstOctet) {
+    if (firstOctet >= 1 && firstOctet <= 126) return "A";
+    if (firstOctet === 127) return "Loopback";
+    if (firstOctet >= 128 && firstOctet <= 191) return "B";
+    if (firstOctet >= 192 && firstOctet <= 223) return "C";
+    if (firstOctet >= 224 && firstOctet <= 239) return "D (Multicast)";
+    if (firstOctet >= 240 && firstOctet <= 255) return "E (Reserved)";
+    return "Tidak Diketahui";
+}
+
+/** Mendapatkan Tipe IP (Private, Public, dll.) */
+function getIpType(ipInt, firstOctet, ipClass) {
+    if (ipClass === "Loopback") return "Loopback";
+    
+    // Cek APIPA (169.254.x.x)
+    if ((ipInt & 0xFFFF0000) >>> 0 === 0xA9FE0000) return "APIPA";
+
+    // Cek Private Ranges (RFC 1918)
+    // 10.0.0.0/8
+    if (firstOctet === 10) return "Private (Class A)";
+    
+    // 172.16.0.0/12 (172.16.0.0 - 172.31.255.255)
+    if ((ipInt & 0xFFF00000) >>> 0 === 0xAC100000) return "Private (Class B)";
+
+    // 192.168.0.0/16 (192.168.0.0 - 192.168.255.255)
+    if ((ipInt & 0xFFFF0000) >>> 0 === 0xC0A80000) return "Private (Class C)";
+    
+    // Cek Multicast
+    if (ipClass.startsWith("D")) return "Multicast";
+
+    // Jika bukan semuanya, berarti Public
+    return "Public";
+}
+// --- ▲▲▲ BATAS AKHIR FUNGSI BARU ▲▲▲ ---
