@@ -172,3 +172,52 @@ button:active {
 .hidden {
     display: none;
 }
+/* ... (kode CSS lama Anda ada di sini) ... */
+
+/* ▼▼▼ TAMBAHKAN KODE BARU DI BAWAH INI ▼▼▼ */
+
+/* Styling untuk kelompok hasil biner */
+.binary-view {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px dashed #dde3ea;
+}
+
+.binary-view strong {
+    display: block;
+    color: #4a5a73;
+    font-weight: 500;
+    margin-bottom: 15px;
+}
+
+.binary-view span {
+    /* Reset beberapa style dari #results span */
+    display: block; /* Buat jadi block agar bisa diatur lebarnya */
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+}
+
+.binary-view span.binary-code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 15px; /* Sedikit lebih besar agar mudah dibaca */
+    letter-spacing: 1.5px; /* Beri jarak antar angka */
+    color: #0056b3;
+    background-color: #f0f6ff;
+    border: 1px solid #cce4ff;
+    word-break: break-all; /* Pastikan bisa patah baris di HP */
+}
+
+.binary-view span[id$="-label"] {
+    /* Label (IP Address: / Subnet Mask:) */
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #5a6981;
+    border: none;
+    letter-spacing: 0;
+}
+
+/* ▲▲▲ BATAS AKHIR KODE BARU ▲▲▲ */
