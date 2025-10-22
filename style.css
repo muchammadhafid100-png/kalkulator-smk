@@ -1,80 +1,126 @@
-/* Reset dasar */
+/* Import font yang bagus */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
 body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: #f0f0f0;
+    font-family: 'Inter', sans-serif;
+    background-color: #f0f4f8;
+    color: #333;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
-/* Kontainer utama kalkulator */
-.kalkulator {
-    width: 320px;
-    border: 1px solid #ccc;
+.container {
+    width: 100%;
+    max-width: 600px;
+    background-color: #ffffff;
+    padding: 30px;
     border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    background-color: #fff;
-    overflow: hidden; /* Agar border-radius terlihat */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-/* Layar display */
-.display {
-    background-color: #222;
-    color: #fff;
-    font-size: 2.5rem;
-    padding: 20px;
-    text-align: right;
-    min-height: 50px;
-    word-wrap: break-word; /* Agar angka panjang pindah baris */
+h1 {
+    color: #0a4a90;
+    text-align: center;
+    margin-top: 0;
 }
 
-/* Grid untuk tombol */
-.tombol-grid {
-    display: grid;
-    /* 4 kolom dengan lebar sama */
-    grid-template-columns: repeat(4, 1fr); 
+p {
+    line-height: 1.6;
 }
 
-/* Style dasar tombol */
-.tombol {
-    font-size: 1.5rem;
-    padding: 20px;
+.input-group {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px;
     border: 1px solid #ddd;
-    background-color: #f9f9f9;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+.input-group input[type="text"] {
+    flex: 3; /* IP lebih lebar */
+}
+
+.input-group input[type="number"] {
+    flex: 1; /* CIDR lebih kecil */
+    max-width: 80px;
+    text-align: center;
+}
+
+.input-group .slash {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0 10px;
+    color: #555;
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 6px;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.3s ease;
 }
 
-.tombol:hover {
-    background-color: #f0f0f0;
+button:hover {
+    background-color: #0056b3;
 }
 
-.tombol:active {
-    background-color: #e0e0e0;
+/* Penataan Hasil */
+#results {
+    margin-top: 25px;
+    background-color: #fdfdfd;
+    border: 1px solid #e0e0e0;
+    padding: 20px;
+    border-radius: 8px;
 }
 
-/* Style khusus tombol operator */
-.operator {
-    background-color: #f39c12; /* Warna oranye */
-    color: white;
+#results h2 {
+    margin-top: 0;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 5px;
 }
 
-.operator:hover {
-    background-color: #e68e0b;
+#results p {
+    font-size: 16px;
+    display: flex;
+    justify-content: space-between;
 }
 
-/* Tombol yang butuh 2 atau 3 kolom (span) */
-.span-dua {
-    grid-row: span 2; /* Tombol '=' jadi tinggi */
-    background-color: #2ecc71; /* Warna hijau */
-    color: white;
-}
-.span-dua:hover {
-    background-color: #27ae60;
+#results span {
+    font-weight: 700;
+    color: #333;
+    background-color: #e9f5ff;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
 }
 
-.span-tiga {
-    grid-column: span 3; /* Tombol '0' jadi lebar */
+/* Pesan Error */
+#error {
+    margin-top: 15px;
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #c62828;
+}
+
+/* Utility class untuk menyembunyikan */
+.hidden {
+    display: none;
 }
