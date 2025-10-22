@@ -3,36 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kalkulator SMK</title>
+    <title>Kalkulator Jaringan TKJ</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="kalkulator">
-        <div class="display" id="display">0</div>
-        <div class="tombol-grid">
-            <button class="tombol" data-action="clear">C</button>
-            <button class="tombol operator" data-action="operator">/</button>
-            <button class="tombol operator" data-action="operator">*</button>
-            <button class="tombol" data-action="backspace">←</button>
+    <div class="container">
+        <h1>Kalkulator Subnetting</h1>
+        <p>Dibuat untuk Pelajar TKJ</p>
 
-            <button class="tombol" data-value="7">7</button>
-            <button class="tombol" data-value="8">8</button>
-            <button class="tombol" data-value="9">9</button>
-            <button class="tombol operator" data-action="operator">-</button>
+        <div class="input-group">
+            <input type="text" id="ip-address" placeholder="Masukkan IP Address (cth: 192.168.1.10)">
+            <span class="slash">/</span>
+            <input type="number" id="cidr" placeholder="24" min="0" max="32">
+        </div>
+        
+        <button id="calculate-btn">Hitung!</button>
 
-            <button class="tombol" data-value="4">4</button>
-            <button class="tombol" data-value="5">5</button>
-            <button class="tombol" data-value="6">6</button>
-            <button class="tombol operator" data-action="operator">+</button>
+        <div id="results" class="hidden">
+            <h2>Hasil Perhitungan:</h2>
+            <p><strong>Alamat IP:</strong> <span id="res-ip"></span></p>
+            <p><strong>Subnet Mask:</strong> <span id="res-mask"></span></p>
+            <hr>
+            <p><strong>Network ID:</strong> <span id="res-network"></span></p>
+            <p><strong>Broadcast ID:</strong> <span id="res-broadcast"></span></p>
+            <p><strong>Rentang Host:</strong> <span id="res-host-range"></span></p>
+            <hr>
+            <p><strong>Jumlah Host:</strong> <span id="res-total-hosts"></span></p>
+            <p><strong>Host yang Dapat Digunakan:</strong> <span id="res-usable-hosts"></span></p>
+        </div>
 
-            <button class="tombol" data-value="1">1</button>
-            <button class="tombol" data-value="2">2</button>
-            <button class="tombol" data-value="3">3</button>
-            <button class="tombol span-dua" data-action="calculate">=</button>
-
-            <button class="tombol span-tiga" data-value="0">0</button>
-            <button class="tombol" data-action="decimal">.</button>
+        <div id="error" class="hidden">
+            <p>Input tidak valid. Pastikan IP dan CIDR (0-32) benar.</p>
         </div>
     </div>
 
