@@ -1,154 +1,134 @@
-// Menunggu sampai semua konten HTML dimuat
-document.addEventListener('DOMContentLoaded', () => {
+/* * Ini adalah 'otak' dari kalkulator subnetting.
+ * Kita akan menggunakan 'bitwise operators' (operasi biner) 
+ * karena IP Address pada dasarnya adalah angka 32-bit.
+ */
 
-    // 1. Ambil elemen yang kita butuhkan
-    const displayElement = document.getElementById('display');
-    const tombolGrid = document.querySelector('.tombol-grid');
+// 1. Ambil elemen HTML yang kita butuhkan
+const ipInput = document.getElementById('ip-address');
+const cidrInput = document.getElementById('cidr');
+const calculateBtn = document.getElementById('calculate-btn');
+const resultsDiv = document.getElementById('results');
+const errorDiv = document.getElementById('error');
 
-    // 2. Variabel untuk menyimpan state kalkulator
-    let currentInput = '0'; // Apa yang tampil di layar
-    let operator = null; // Operator yang dipilih (+, -, *, /)
-    let previousInput = null; // Angka pertama sebelum operator
-    let waitingForSecondOperand = false; // Status apakah kita sedang menunggu angka kedua
+// 2. Tambahkan 'event listener' ke tombol
+calculateBtn.addEventListener('click', calculateAndDisplay);
 
-    // 3. Fungsi utama untuk mengupdate layar
-    function updateDisplay() {
-        displayElement.textContent = currentInput;
+// Fungsi utama yang akan dipanggil saat tombol diklik
+function calculateAndDisplay() {
+    // Ambil nilai dari input
+    const ipStr = ipInput.value;
+    const cidr = parseInt(cidrInput.value, 10);
+
+    // Validasi input
+    if (!isValidIp(ipStr) || isNaN(cidr) || cidr < 0 || cidr > 32) {
+        showError(true);
+        showResults(false);
+        return; // Hentikan eksekusi
     }
 
-    // 4. Fungsi untuk menangani input angka
-    function inputDigit(digit) {
-        if (waitingForSecondOperand) {
-            currentInput = digit;
-            waitingForSecondOperand = false;
-        } else {
-            // Jika di layar masih 0, ganti dengan angka. Jika tidak, tambahkan.
-            currentInput = currentInput === '0' ? digit : currentInput + digit;
-        }
+    // Input valid, sembunyikan error dan lanjutkan
+    showError(false);
+    
+    // --- INTI LOGIKA SUBTARGETTING ---
+
+    // Ubah IP string (192.168.1.10) menjadi angka 32-bit (integer)
+    const ipInt = ipToInteger(ipStr);
+    
+    // Hitung Subnet Mask dari CIDR (misal /24 -> 255.255.255.0)
+    // Ini adalah trik bitwise:
+    // -1 (dalam 32-bit) adalah 32 buah angka 1 (1111...1111)
+    // (32 - cidr) misal 32-24 = 8
+    // Kita geser 32 angka 1 tadi ke kiri sebanyak 8 kali
+    // Hasil: (11111111 11111111 11111111 00000000) -> 255.255.255.0
+    // '>>> 0' adalah trik untuk memastikan angka tetap positif (unsigned)
+    const maskInt = (-1 << (32 - cidr)) >>> 0;
+    
+    // Hitung Network ID
+    // Rumus: IP AND MASK
+    const networkInt = (ipInt & maskInt) >>> 0;
+
+    // Hitung Broadcast ID
+    // Rumus: NetworkID OR (NOT MASK)
+    // (NOT MASK) juga disebut Wildcard Mask
+    const broadcastInt = (networkInt | (~maskInt)) >>> 0;
+
+    // Hitung Host Pertama dan Terakhir
+    // (Khusus untuk /31 dan /32)
+    const firstHostInt = (cidr <= 30) ? (networkInt + 1) >>> 0 : networkInt;
+    const lastHostInt = (cidr <= 30) ? (broadcastInt - 1) >>> 0 : broadcastInt;
+    
+    // Hitung Jumlah Host
+    // Rumus: 2^(32 - cidr)
+    const totalHosts = Math.pow(2, (32 - cidr));
+    const usableHosts = (cidr <= 30) ? (totalHosts - 2) : totalHosts;
+
+    // --- Tampilkan Hasil ---
+    
+    // Ubah angka integer kembali ke format IP (192.168.1.0)
+    document.getElementById('res-ip').textContent = `${ipStr}/${cidr}`;
+    document.getElementById('res-mask').textContent = integerToIp(maskInt);
+    document.getElementById('res-network').textContent = integerToIp(networkInt);
+    document.getElementById('res-broadcast').textContent = integerToIp(broadcastInt);
+    
+    // Tampilkan rentang host
+    if (cidr <= 30) {
+        document.getElementById('res-host-range').textContent = `${integerToIp(firstHostInt)} - ${integerToIp(lastHostInt)}`;
+    } else if (cidr == 31) {
+         document.getElementById('res-host-range').textContent = "Point-to-Point (2 host)";
+    } else { // cidr == 32
+         document.getElementById('res-host-range').textContent = "Hanya 1 host (Loopback)";
     }
+    
+    document.getElementById('res-total-hosts').textContent = totalHosts.toLocaleString();
+    document.getElementById('res-usable-hosts').textContent = (usableHosts > 0) ? usableHosts.toLocaleString() : "0";
 
-    // 5. Fungsi untuk input desimal (.)
-    function inputDecimal() {
-        // Hanya tambahkan titik jika belum ada
-        if (!currentInput.includes('.')) {
-            currentInput += '.';
-        }
+    // Tampilkan div hasil
+    showResults(true);
+}
+
+// --- FUNGSI BANTUAN ---
+
+/** Mengubah IP string (cth: "192.168.1.1") menjadi integer 32-bit */
+function ipToInteger(ipStr) {
+    // 1. "192.168.1.1" -> ["192", "168", "1", "1"]
+    const octets = ipStr.split('.').map(octet => parseInt(octet, 10));
+    // 2. Geser bit-nya (bitwise shift) dan gabungkan
+    // (192 << 24) | (168 << 16) | (1 << 8) | 1
+    return ((octets[0] << 24) | (octets[1] << 16) | (octets[2] << 8) | octets[3]) >>> 0;
+}
+
+/** Mengubah integer 32-bit (cth: 3232235777) menjadi IP string */
+function integerToIp(ipInt) {
+    // 1. Ambil 4 bagian (octet) dari integer
+    // '>>>' adalah unsigned right shift, '& 255' mengambil 8 bit terakhir
+    const octet1 = (ipInt >>> 24) & 255;
+    const octet2 = (ipInt >>> 16) & 255;
+    const octet3 = (ipInt >>> 8) & 255;
+    const octet4 = ipInt & 255;
+    // 2. Gabungkan dengan titik
+    return `${octet1}.${octet2}.${octet3}.${octet4}`;
+}
+
+/** Pengecekan sederhana format IP Address */
+function isValidIp(ipStr) {
+    const regex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    return regex.test(ipStr);
+}
+
+/** Fungsi untuk menampilkan/menyembunyikan pesan error */
+function showError(show) {
+    if (show) {
+        errorDiv.classList.remove('hidden');
+    } else {
+        errorDiv.classList.add('hidden');
     }
+}
 
-    // 6. Fungsi untuk menangani operator
-    function handleOperator(nextOperator) {
-        const inputValue = parseFloat(currentInput);
-
-        // Jika sudah ada operator dan kita masukkan operator lagi, hitung dulu
-        if (operator && waitingForSecondOperand) {
-            operator = nextOperator;
-            return;
-        }
-
-        // Simpan angka pertama
-        if (previousInput === null) {
-            previousInput = inputValue;
-        } else if (operator) {
-            // Lakukan perhitungan jika sudah ada angka pertama dan operator
-            const result = performCalculation();
-            currentInput = String(result);
-            previousInput = result;
-        }
-
-        waitingForSecondOperand = true;
-        operator = nextOperator;
-        updateDisplay(); // Tampilkan hasil sementara (jika ada)
+/** Fungsi untuk menampilkan/menyembunyikan div hasil */
+function showResults(show) {
+    if (show) {
+        resultsDiv.classList.remove('hidden');
+    } else {
+        resultsDiv.classList.add('hidden');
     }
-
-    // 7. Fungsi inti kalkulasi
-    function performCalculation() {
-        const inputValue = parseFloat(currentInput);
-        if (previousInput === null || operator === null) {
-            return inputValue;
-        }
-
-        let result;
-        switch (operator) {
-            case '+':
-                result = previousInput + inputValue;
-                break;
-            case '-':
-                result = previousInput - inputValue;
-                break;
-            case '*':
-                result = previousInput * inputValue;
-                break;
-            case '/':
-                // Hindari pembagian dengan nol
-                result = (inputValue === 0) ? 'Error' : previousInput / inputValue;
-                break;
-            default:
-                return inputValue;
-        }
-        return result;
-    }
-
-    // 8. Fungsi untuk reset (Tombol C)
-    function clearCalculator() {
-        currentInput = '0';
-        operator = null;
-        previousInput = null;
-        waitingForSecondOperand = false;
-    }
-
-    // 9. Fungsi hapus (Tombol ←)
-    function backspace() {
-        currentInput = currentInput.slice(0, -1);
-        // Jika setelah dihapus jadi kosong, set ke 0
-        if (currentInput === '') {
-            currentInput = '0';
-        }
-    }
-
-    // 10. Event Listener Utama (Event Delegation)
-    tombolGrid.addEventListener('click', (event) => {
-        const target = event.target; // Tombol yang diklik
-
-        // Pastikan yang diklik adalah tombol
-        if (!target.matches('button')) {
-            return;
-        }
-
-        const value = target.dataset.value;
-        const action = target.dataset.action;
-
-        if (value) {
-            // Jika tombol angka (data-value)
-            inputDigit(value);
-        } else if (action) {
-            // Jika tombol aksi (data-action)
-            switch (action) {
-                case 'operator':
-                    handleOperator(target.textContent);
-                    break;
-                case 'decimal':
-                    inputDecimal();
-                    break;
-                case 'clear':
-                    clearCalculator();
-                    break;
-                case 'backspace':
-                    backspace();
-                    break;
-                case 'calculate':
-                    // Saat = ditekan
-                    const result = performCalculation();
-                    currentInput = String(result);
-                    operator = null;
-                    previousInput = null;
-                    waitingForSecondOperand = false;
-                    break;
-            }
-        }
-
-        updateDisplay(); // Update layar setiap kali tombol diklik
-    });
-
-    // Inisialisasi layar
-    updateDisplay();
-});
+}
