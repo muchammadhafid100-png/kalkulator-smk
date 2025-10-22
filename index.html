@@ -1,1 +1,41 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator SMK</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+    <div class="kalkulator">
+        <div class="display" id="display">0</div>
+        <div class="tombol-grid">
+            <button class="tombol" data-action="clear">C</button>
+            <button class="tombol operator" data-action="operator">/</button>
+            <button class="tombol operator" data-action="operator">*</button>
+            <button class="tombol" data-action="backspace">←</button>
+
+            <button class="tombol" data-value="7">7</button>
+            <button class="tombol" data-value="8">8</button>
+            <button class="tombol" data-value="9">9</button>
+            <button class="tombol operator" data-action="operator">-</button>
+
+            <button class="tombol" data-value="4">4</button>
+            <button class="tombol" data-value="5">5</button>
+            <button class="tombol" data-value="6">6</button>
+            <button class="tombol operator" data-action="operator">+</button>
+
+            <button class="tombol" data-value="1">1</button>
+            <button class="tombol" data-value="2">2</button>
+            <button class="tombol" data-value="3">3</button>
+            <button class="tombol span-dua" data-action="calculate">=</button>
+
+            <button class="tombol span-tiga" data-value="0">0</button>
+            <button class="tombol" data-action="decimal">.</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
