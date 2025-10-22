@@ -1,80 +1,154 @@
-/* Reset dasar */
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: #f0f0f0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-}
+// Menunggu sampai semua konten HTML dimuat
+document.addEventListener('DOMContentLoaded', () => {
 
-/* Kontainer utama kalkulator */
-.kalkulator {
-    width: 320px;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    background-color: #fff;
-    overflow: hidden; /* Agar border-radius terlihat */
-}
+    // 1. Ambil elemen yang kita butuhkan
+    const displayElement = document.getElementById('display');
+    const tombolGrid = document.querySelector('.tombol-grid');
 
-/* Layar display */
-.display {
-    background-color: #222;
-    color: #fff;
-    font-size: 2.5rem;
-    padding: 20px;
-    text-align: right;
-    min-height: 50px;
-    word-wrap: break-word; /* Agar angka panjang pindah baris */
-}
+    // 2. Variabel untuk menyimpan state kalkulator
+    let currentInput = '0'; // Apa yang tampil di layar
+    let operator = null; // Operator yang dipilih (+, -, *, /)
+    let previousInput = null; // Angka pertama sebelum operator
+    let waitingForSecondOperand = false; // Status apakah kita sedang menunggu angka kedua
 
-/* Grid untuk tombol */
-.tombol-grid {
-    display: grid;
-    /* 4 kolom dengan lebar sama */
-    grid-template-columns: repeat(4, 1fr); 
-}
+    // 3. Fungsi utama untuk mengupdate layar
+    function updateDisplay() {
+        displayElement.textContent = currentInput;
+    }
 
-/* Style dasar tombol */
-.tombol {
-    font-size: 1.5rem;
-    padding: 20px;
-    border: 1px solid #ddd;
-    background-color: #f9f9f9;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
+    // 4. Fungsi untuk menangani input angka
+    function inputDigit(digit) {
+        if (waitingForSecondOperand) {
+            currentInput = digit;
+            waitingForSecondOperand = false;
+        } else {
+            // Jika di layar masih 0, ganti dengan angka. Jika tidak, tambahkan.
+            currentInput = currentInput === '0' ? digit : currentInput + digit;
+        }
+    }
 
-.tombol:hover {
-    background-color: #f0f0f0;
-}
+    // 5. Fungsi untuk input desimal (.)
+    function inputDecimal() {
+        // Hanya tambahkan titik jika belum ada
+        if (!currentInput.includes('.')) {
+            currentInput += '.';
+        }
+    }
 
-.tombol:active {
-    background-color: #e0e0e0;
-}
+    // 6. Fungsi untuk menangani operator
+    function handleOperator(nextOperator) {
+        const inputValue = parseFloat(currentInput);
 
-/* Style khusus tombol operator */
-.operator {
-    background-color: #f39c12; /* Warna oranye */
-    color: white;
-}
+        // Jika sudah ada operator dan kita masukkan operator lagi, hitung dulu
+        if (operator && waitingForSecondOperand) {
+            operator = nextOperator;
+            return;
+        }
 
-.operator:hover {
-    background-color: #e68e0b;
-}
+        // Simpan angka pertama
+        if (previousInput === null) {
+            previousInput = inputValue;
+        } else if (operator) {
+            // Lakukan perhitungan jika sudah ada angka pertama dan operator
+            const result = performCalculation();
+            currentInput = String(result);
+            previousInput = result;
+        }
 
-/* Tombol yang butuh 2 atau 3 kolom (span) */
-.span-dua {
-    grid-row: span 2; /* Tombol '=' jadi tinggi */
-    background-color: #2ecc71; /* Warna hijau */
-    color: white;
-}
-.span-dua:hover {
-    background-color: #27ae60;
-}
+        waitingForSecondOperand = true;
+        operator = nextOperator;
+        updateDisplay(); // Tampilkan hasil sementara (jika ada)
+    }
 
-.span-tiga {
-    grid-column: span 3; /* Tombol '0' jadi lebar */
-}
+    // 7. Fungsi inti kalkulasi
+    function performCalculation() {
+        const inputValue = parseFloat(currentInput);
+        if (previousInput === null || operator === null) {
+            return inputValue;
+        }
+
+        let result;
+        switch (operator) {
+            case '+':
+                result = previousInput + inputValue;
+                break;
+            case '-':
+                result = previousInput - inputValue;
+                break;
+            case '*':
+                result = previousInput * inputValue;
+                break;
+            case '/':
+                // Hindari pembagian dengan nol
+                result = (inputValue === 0) ? 'Error' : previousInput / inputValue;
+                break;
+            default:
+                return inputValue;
+        }
+        return result;
+    }
+
+    // 8. Fungsi untuk reset (Tombol C)
+    function clearCalculator() {
+        currentInput = '0';
+        operator = null;
+        previousInput = null;
+        waitingForSecondOperand = false;
+    }
+
+    // 9. Fungsi hapus (Tombol ←)
+    function backspace() {
+        currentInput = currentInput.slice(0, -1);
+        // Jika setelah dihapus jadi kosong, set ke 0
+        if (currentInput === '') {
+            currentInput = '0';
+        }
+    }
+
+    // 10. Event Listener Utama (Event Delegation)
+    tombolGrid.addEventListener('click', (event) => {
+        const target = event.target; // Tombol yang diklik
+
+        // Pastikan yang diklik adalah tombol
+        if (!target.matches('button')) {
+            return;
+        }
+
+        const value = target.dataset.value;
+        const action = target.dataset.action;
+
+        if (value) {
+            // Jika tombol angka (data-value)
+            inputDigit(value);
+        } else if (action) {
+            // Jika tombol aksi (data-action)
+            switch (action) {
+                case 'operator':
+                    handleOperator(target.textContent);
+                    break;
+                case 'decimal':
+                    inputDecimal();
+                    break;
+                case 'clear':
+                    clearCalculator();
+                    break;
+                case 'backspace':
+                    backspace();
+                    break;
+                case 'calculate':
+                    // Saat = ditekan
+                    const result = performCalculation();
+                    currentInput = String(result);
+                    operator = null;
+                    previousInput = null;
+                    waitingForSecondOperand = false;
+                    break;
+            }
+        }
+
+        updateDisplay(); // Update layar setiap kali tombol diklik
+    });
+
+    // Inisialisasi layar
+    updateDisplay();
+});
